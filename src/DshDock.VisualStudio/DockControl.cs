@@ -119,7 +119,7 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 pairing = new DockPairing(
-                    "0.2.9",
+                    "0.3.0",
                     DshDockPackage.Instance == null ? DockPairing.PreferredPort : DshDockPackage.Instance.Options.McpPort);
                 pairing.StateChanged += OnPairingState;
                 if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.EditorTools)

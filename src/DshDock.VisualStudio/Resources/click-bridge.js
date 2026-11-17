@@ -44,9 +44,11 @@
         event.preventDefault();
         event.stopImmediatePropagation();
         try {
-          window.chrome.webview.postMessage('open-file:' + path + '\u0000bridge');
+          // The shell resolves relative paths against the bound session's
+          // working directory and forwards the result to the extension.
+          window.parent.postMessage({ type: 'quickdock:open-file', path: path + '\u0000bridge' }, '*');
         } catch (error) {
-          // The host is gone; nothing to tell.
+          // The shell is gone; nothing to tell.
         }
         return;
       }
