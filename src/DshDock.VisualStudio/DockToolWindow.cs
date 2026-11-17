@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.Design;
 using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.Shell;
 
@@ -18,6 +19,11 @@ namespace DshDock.VisualStudio
         {
             DockLog.Write("pane ctor; ui=" + ThreadHelper.CheckAccess());
             Caption = "DSH Dock";
+            // The Reload button lives in the tool window's own toolbar, which VS
+            // draws in the pane's caption bar.
+            ToolBar = new CommandID(
+                new Guid(DshDockPackage.CommandSetGuidString),
+                DshDockPackage.DockToolbarCommandId);
             Content = new DockControl();
             DockLog.Write("pane ctor done; content=" + (Content == null ? "null" : Content.GetType().Name));
         }

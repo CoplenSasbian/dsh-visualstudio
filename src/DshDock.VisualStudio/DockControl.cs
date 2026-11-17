@@ -110,7 +110,7 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.WebMessageReceived += OnWebMessage;
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
-                pairing = new DockPairing("0.2.0");
+                pairing = new DockPairing("0.2.1");
                 pairing.StateChanged += OnPairingState;
 
                 await ProbeAndShowAsync();
@@ -122,6 +122,13 @@ namespace DshDock.VisualStudio
             }
         }
 
+        /// <summary>Reload the shell page (tool window toolbar), picking a new port if DSH moved.</summary>
+        public void Reload()
+        {
+            DockLog.Write("reload requested");
+            _ = ProbeAndShowAsync();
+        }
+
         /// <summary>Ask the listener whether it is there, then show the shell or the card.</summary>
         private async Task ProbeAndShowAsync()
         {
@@ -130,6 +137,11 @@ namespace DshDock.VisualStudio
                 ShowProblem("WebView2 did not initialise.");
                 return;
             }
+            // Re-resolve on every probe: a DSH restart gives the app proxy a new
+            // port, and Reload must not keep the URL this window booted with.
+            port = QuickDockUrls.ResolvePort();
+            origin = port > 0 ? "http://127.0.0.1:" + port : string.Empty;
+            shellUrl = port > 0 ? QuickDockUrls.ShellUrl(port) : string.Empty;
             if (port <= 0 || string.IsNullOrEmpty(shellUrl))
             {
                 ShowOffline("QuickDock's listener is turned off (port 0). Start DSH and enable the listener in DSH → Settings → QuickDock → Connection.");

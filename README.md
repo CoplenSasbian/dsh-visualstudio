@@ -27,6 +27,9 @@ tools and review diffs are the next milestone.
 - **Scoped to your solution.** Tools are mounted only for sessions working inside the solution
   directory; when the session on screen works elsewhere, the title bar shows an amber warning
   triangle, and the list button shows what was published and what is mounted.
+- **Reload without restarting Visual Studio.** The tool window's own toolbar has a Reload
+  button: it re-resolves QuickDock's port and reloads the shell page, so a DSH restart does not
+  need an IDE restart.
 - **Never a blank panel.** When DSH or QuickDock is not reachable, the window says which
   address it tried and why, and offers Retry and Open in browser.
 - **Finds the listener.** The port comes from `DSH_QUICKDOCK_PORT`, then QuickDock's

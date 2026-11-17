@@ -4,6 +4,23 @@
   <Extern href="vsshlids.h" />
 
   <Commands package="guidDshDockPackage">
+    <Menus>
+      <Menu guid="guidDshDockCmdSet" id="DockToolbar" priority="0x0000" type="ToolWindowToolbar">
+        <Parent guid="guidDshDockCmdSet" id="DockToolbar" />
+        <CommandFlag>AlwaysCreate</CommandFlag>
+        <Strings>
+          <ButtonText>DSH Dock</ButtonText>
+          <CommandName>DSH Dock</CommandName>
+        </Strings>
+      </Menu>
+    </Menus>
+
+    <Groups>
+      <Group guid="guidDshDockCmdSet" id="DockToolbarGroup" priority="0x0000">
+        <Parent guid="guidDshDockCmdSet" id="DockToolbar" />
+      </Group>
+    </Groups>
+
     <Buttons>
       <Button guid="guidDshDockCmdSet" id="OpenDockCommandId" priority="0x0200" type="Button">
         <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
@@ -12,13 +29,32 @@
           <CommandName>DSH Dock</CommandName>
         </Strings>
       </Button>
+      <Button guid="guidDshDockCmdSet" id="ReloadDockCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidDshDockCmdSet" id="DockToolbarGroup" />
+        <Icon guid="guidImages" id="bmpReload" />
+        <Strings>
+          <ButtonText>Reload</ButtonText>
+          <ToolTipText>Reload the dock page and reconnect to DSH</ToolTipText>
+          <CommandName>Reload</CommandName>
+        </Strings>
+      </Button>
     </Buttons>
+
+    <Bitmaps>
+      <Bitmap guid="guidImages" href="Resources\reload.png" usedList="bmpReload" />
+    </Bitmaps>
   </Commands>
 
   <Symbols>
     <GuidSymbol name="guidDshDockPackage" value="{8a5b0f3c-2d4e-4f6a-9c1d-7e8f9a0b1c2d}" />
+    <GuidSymbol name="guidImages" value="{5c1a2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b}">
+      <IDSymbol name="bmpReload" value="1" />
+    </GuidSymbol>
     <GuidSymbol name="guidDshDockCmdSet" value="{3c9d8e7f-1a2b-4c5d-8e9f-0a1b2c3d4e5f}">
       <IDSymbol name="OpenDockCommandId" value="0x0100" />
+      <IDSymbol name="ReloadDockCommandId" value="0x0101" />
+      <IDSymbol name="DockToolbar" value="0x0102" />
+      <IDSymbol name="DockToolbarGroup" value="0x0103" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

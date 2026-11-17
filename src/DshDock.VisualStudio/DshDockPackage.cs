@@ -16,7 +16,7 @@ namespace DshDock.VisualStudio
     [InstalledProductRegistration(
         "DSH Dock for Visual Studio",
         "DeepSeek Harness's conversation in a Visual Studio tool window, served by QuickDock.",
-        "0.2.0")]
+        "0.2.1")]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideToolWindow(typeof(DockToolWindow))]
     [Guid(PackageGuidString)]
@@ -27,6 +27,10 @@ namespace DshDock.VisualStudio
         public const string CommandSetGuidString = "3c9d8e7f-1a2b-4c5d-8e9f-0a1b2c3d4e5f";
 
         public const int OpenDockCommandId = 0x0100;
+
+        public const int ReloadDockCommandId = 0x0101;
+
+        public const int DockToolbarCommandId = 0x0102;
 
         protected override async Task InitializeAsync(
             CancellationToken cancellationToken,
@@ -43,6 +47,15 @@ namespace DshDock.VisualStudio
 
             var commandId = new CommandID(new Guid(CommandSetGuidString), OpenDockCommandId);
             commandService.AddCommand(new MenuCommand(OnOpenDock, commandId));
+            var reloadId = new CommandID(new Guid(CommandSetGuidString), ReloadDockCommandId);
+            commandService.AddCommand(new MenuCommand(OnReloadDock, reloadId));
+        }
+
+        private void OnReloadDock(object sender, EventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var window = FindToolWindow(typeof(DockToolWindow), 0, false) as DockToolWindow;
+            (window?.Content as DockControl)?.Reload();
         }
 
         private void OnOpenDock(object sender, EventArgs e)
