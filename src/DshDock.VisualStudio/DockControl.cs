@@ -102,8 +102,11 @@ namespace DshDock.VisualStudio
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "DshDock",
                     "WebView2");
-                var environment = await CoreWebView2Environment.CreateAsync(null, dataFolder);
-                DockLog.Write("environment ok: " + environment.BrowserVersionString);
+                // A loopback DevTools endpoint so the dock can be inspected live
+                // (and so `playwright`/CDP can drive it) without a debugger.
+                var environmentOptions = new CoreWebView2EnvironmentOptions("--remote-debugging-port=9222");
+                var environment = await CoreWebView2Environment.CreateAsync(null, dataFolder, environmentOptions);
+                DockLog.Write("environment ok: " + environment.BrowserVersionString + " devtools=http://127.0.0.1:9222");
                 await view.EnsureCoreWebView2Async(environment);
                 DockLog.Write("webview ok");
 
@@ -114,7 +117,7 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 pairing = new DockPairing(
-                    "0.2.5",
+                    "0.2.6",
                     DshDockPackage.Instance == null ? DockPairing.PreferredPort : DshDockPackage.Instance.Options.McpPort);
                 pairing.StateChanged += OnPairingState;
                 if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.EditorTools)
