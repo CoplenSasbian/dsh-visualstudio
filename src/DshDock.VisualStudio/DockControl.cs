@@ -45,7 +45,10 @@ namespace DshDock.VisualStudio
 
         public DockControl()
         {
-            DockLog.Write("control created");
+            DockLog.Write(
+                "=== DshDock 0.2.4 pid="
+                + System.Diagnostics.Process.GetCurrentProcess().Id
+                + " ui=" + ThreadHelper.CheckAccess());
 
             Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(21, 21, 23));
 
@@ -111,7 +114,7 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 pairing = new DockPairing(
-                    "0.2.3",
+                    "0.2.4",
                     DshDockPackage.Instance == null ? DockPairing.PreferredPort : DshDockPackage.Instance.Options.McpPort);
                 pairing.StateChanged += OnPairingState;
                 if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.EditorTools)
@@ -270,6 +273,17 @@ namespace DshDock.VisualStudio
 
         private void OnWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
+            string raw;
+            try
+            {
+                raw = e.WebMessageAsJson ?? string.Empty;
+            }
+            catch (Exception)
+            {
+                raw = "<unavailable>";
+            }
+            DockLog.Write("web message raw: " + (raw.Length > 200 ? raw.Substring(0, 200) : raw));
+
             string message;
             try
             {
@@ -361,6 +375,9 @@ namespace DshDock.VisualStudio
                     break;
                 case "quickdock:mcp-toggle":
                     pairing?.Toggle();
+                    break;
+                case "quickdock:debug-click":
+                    DockLog.Write("debug click: host=" + Value(data, "host") + " path=" + Value(data, "path"));
                     break;
             }
         }
