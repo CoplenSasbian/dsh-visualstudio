@@ -12,6 +12,8 @@
     if (!text || text.length > 400) return '';
     if (/^[A-Za-z]:[\\/][^\n\r<>"|?*]+$/.test(text)) return text;
     if (/^(?:[A-Za-z0-9_.@-]+[\\/])+[A-Za-z0-9_.@-]+\.[A-Za-z0-9]{1,8}$/.test(text)) return text;
+    // A chip at a root shows only `file.cs`; the extension tries every open root.
+    if (/^[A-Za-z0-9_.@-]+\.[A-Za-z0-9]{1,8}$/.test(text)) return text;
     return '';
   }
 
