@@ -27,6 +27,10 @@ tools and review diffs are the next milestone.
 - **Scoped to your solution.** Tools are mounted only for sessions working inside the solution
   directory; when the session on screen works elsewhere, the title bar shows an amber warning
   triangle, and the list button shows what was published and what is mounted.
+- **Automatic review diffs.** When DSH's own file tools write or create a file, a before/after
+  diff opens in Visual Studio's comparison window. Only DSH's reported writes arrive here, so a
+  build, a formatter or a shell command never opens one; unsaved buffers, binaries and large
+  files are skipped. Turn it off in Tools → Options → DSH Dock.
 - **Reload without restarting Visual Studio.** The tool window's own toolbar has a Reload
   button: it re-resolves QuickDock's port and reloads the shell page, so a DSH restart does not
   need an IDE restart.

@@ -41,6 +41,7 @@ namespace DshDock.VisualStudio
         private bool started;
         private bool offline;
         private DockPairing pairing;
+        private ReviewWatcher review;
         private readonly System.Web.Script.Serialization.JavaScriptSerializer json =
             new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = 8 * 1024 * 1024 };
 
@@ -118,12 +119,17 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 pairing = new DockPairing(
-                    "0.2.7",
+                    "0.2.8",
                     DshDockPackage.Instance == null ? DockPairing.PreferredPort : DshDockPackage.Instance.Options.McpPort);
                 pairing.StateChanged += OnPairingState;
                 if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.EditorTools)
                 {
                     pairing.Start();
+                }
+                if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.ReviewEdits)
+                {
+                    review = new ReviewWatcher(port, QuickDockUrls.SearchRoots().ToArray());
+                    review.Start();
                 }
 
                 // A click bridge inside the DSH app frame: the app's own routing
@@ -451,6 +457,8 @@ namespace DshDock.VisualStudio
 
         public void Dispose()
         {
+            review?.Dispose();
+            review = null;
             pairing?.Dispose();
             pairing = null;
         }

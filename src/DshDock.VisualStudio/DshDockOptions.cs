@@ -34,5 +34,10 @@ namespace DshDock.VisualStudio
         [DisplayName("Allow write tools")]
         [Description("Reserved for the write tools (edit, save, run, debug); the current build publishes read-only tools only.")]
         public bool WriteTools { get; set; }
+
+        [Category("Review")]
+        [DisplayName("Open a diff for DSH's file changes")]
+        [Description("When DSH's own file tools write or create a file, open its before/after diff. Only DSH's reported writes are followed; a build or a shell command never opens one.")]
+        public bool ReviewEdits { get; set; } = true;
     }
 }
