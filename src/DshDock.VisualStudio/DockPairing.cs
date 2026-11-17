@@ -30,6 +30,7 @@ namespace DshDock.VisualStudio
         private readonly string version;
         private readonly string token;
         private readonly List<EditorTool> tools;
+        private readonly int preferredPort;
 
         private EditorMcpServer server;
         private Timer timer;
@@ -39,9 +40,10 @@ namespace DshDock.VisualStudio
         /// <summary>Raised whenever the switch or its detail changes.</summary>
         public event Action<bool, string> StateChanged;
 
-        public DockPairing(string version)
+        public DockPairing(string version, int preferredPort)
         {
             this.version = version;
+            this.preferredPort = preferredPort > 0 ? preferredPort : PreferredPort;
             token = NewToken();
             tools = EditorTools.Build();
         }
@@ -80,7 +82,7 @@ namespace DshDock.VisualStudio
                 }
                 try
                 {
-                    server = Bind(PreferredPort) ?? Bind(0);
+                    server = Bind(preferredPort) ?? Bind(0);
                 }
                 catch (Exception error)
                 {
@@ -169,8 +171,8 @@ namespace DshDock.VisualStudio
                 current = server;
             }
 
-            var port = QuickDockUrls.ResolvePort();
-            if (port <= 0)
+            var port = ResolvePortOnUi();
+            if (port <= 0) 
             {
                 Note("QuickDock's listener is off (port 0)");
                 return;
@@ -287,7 +289,7 @@ namespace DshDock.VisualStudio
         {
             try
             {
-                var port = QuickDockUrls.ResolvePort();
+                var port = ResolvePortOnUi();
                 if (port > 0)
                 {
                     Post(port, "/quickdock/api/mcp-unregister", new Dictionary<string, object>
@@ -369,6 +371,16 @@ namespace DshDock.VisualStudio
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     return QuickDockUrls.WorkspaceFolders().ToList();
+                });
+        }
+
+        private static int ResolvePortOnUi()
+        {
+            return ThreadHelper.JoinableTaskFactory.Run(
+                async delegate
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    return QuickDockUrls.ResolvePort();
                 });
         }
 

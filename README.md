@@ -30,8 +30,12 @@ tools and review diffs are the next milestone.
 - **Reload without restarting Visual Studio.** The tool window's own toolbar has a Reload
   button: it re-resolves QuickDock's port and reloads the shell page, so a DSH restart does not
   need an IDE restart.
-- **Never a blank panel.** When DSH or QuickDock is not reachable, the window says which
-  address it tried and why, and offers Retry and Open in browser.
+- **Never a blank panel.** When DSH or QuickDock is not reachable, the card names the address
+  and where the port came from, and offers Retry, Start DSH, Open in browser, Connection
+  settings, the QuickDock log, and adopting QuickDock's `config.json` port.
+- **Settings.** **Tools → Options → DSH Dock**: the QuickDock port (0 follows the config),
+  whether to follow `config.json`, whether editor tools start with the dock, and the
+  editor-tools port.
 - **Finds the listener.** The port comes from `DSH_QUICKDOCK_PORT`, then QuickDock's
   `config.json`, then `47910` — the same discovery the other docks use.
 - **WebView2**, which ships with Windows and Visual Studio; no extra browser runtime to

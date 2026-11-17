@@ -25,8 +25,10 @@ DSH Dock 把 DSH 自己的对话界面放在正在处理的代码旁边：由 Qu
   标题栏出现琥珀色警告三角，「列表」按钮显示发布了什么、挂载了什么。
 - **不用重启 VS 就能重载。** 工具窗口自带的工具栏里有一个 Reload 按钮：重新解析 QuickDock
   端口并重载壳页，DSH 重启后不需要重启 IDE。
-- **不会只剩空白。** DSH 或 QuickDock 连不上时，窗口会说明尝试的地址和原因，并提供重试和
-  在浏览器打开。
+- **不会只剩空白。** DSH 或 QuickDock 连不上时，卡片会说明尝试的地址以及端口来源，并提供
+  Retry、启动 DSH、在浏览器打开、连接设置、QuickDock 日志、采用 `config.json` 里的端口。
+- **设置页。** **工具 → 选项 → DSH Dock**：QuickDock 端口（0 表示跟随配置）、是否跟随
+  `config.json`、是否随 dock 启动编辑器工具、编辑器工具端口。
 - **自动找监听端口。** 依次读 `DSH_QUICKDOCK_PORT`、QuickDock 的 `config.json`、`47910`，
   和其他 dock 一致。
 - **用 WebView2**，Windows 和 Visual Studio 自带，不需要额外装浏览器运行时。

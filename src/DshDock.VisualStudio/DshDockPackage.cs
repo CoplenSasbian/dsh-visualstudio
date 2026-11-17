@@ -16,13 +16,19 @@ namespace DshDock.VisualStudio
     [InstalledProductRegistration(
         "DSH Dock for Visual Studio",
         "DeepSeek Harness's conversation in a Visual Studio tool window, served by QuickDock.",
-        "0.2.1")]
+        "0.2.2")]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideToolWindow(typeof(DockToolWindow))]
+    [ProvideOptionPage(typeof(DshDockOptions), "DSH Dock", "General", 0, 0, true)]
     [Guid(PackageGuidString)]
     public sealed class DshDockPackage : AsyncPackage
     {
         public const string PackageGuidString = "8a5b0f3c-2d4e-4f6a-9c1d-7e8f9a0b1c2d";
+
+        /// <summary>The loaded package, for the options page and the dock.</summary>
+        public static DshDockPackage Instance { get; private set; }
+
+        public DshDockOptions Options => (DshDockOptions)GetDialogPage(typeof(DshDockOptions));
 
         public const string CommandSetGuidString = "3c9d8e7f-1a2b-4c5d-8e9f-0a1b2c3d4e5f";
 
@@ -36,6 +42,7 @@ namespace DshDock.VisualStudio
             CancellationToken cancellationToken,
             IProgress<ServiceProgressData> progress)
         {
+            Instance = this;
             await base.InitializeAsync(cancellationToken, progress);
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
@@ -56,6 +63,13 @@ namespace DshDock.VisualStudio
             ThreadHelper.ThrowIfNotOnUIThread();
             var window = FindToolWindow(typeof(DockToolWindow), 0, false) as DockToolWindow;
             (window?.Content as DockControl)?.Reload();
+        }
+
+        /// <summary>Open Tools → Options → DSH Dock (the offline card's Settings).</summary>
+        public static void ShowOptions()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            Instance?.ShowOptionPage(typeof(DshDockOptions));
         }
 
         private void OnOpenDock(object sender, EventArgs e)

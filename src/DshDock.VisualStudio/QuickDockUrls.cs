@@ -23,18 +23,37 @@ namespace DshDock.VisualStudio
         public const string ViewName = "visualstudio";
 
         /// <summary>
-        /// The listener port: environment, then QuickDock's own config.json, then
-        /// the default. Zero (or a busy port) means the listener is off.
+        /// The listener port: an explicit port from the options page, then
+        /// DSH_QUICKDOCK_PORT, then QuickDock's own config.json, then the default.
+        /// Zero (or a busy port) means the listener is off.
         /// </summary>
         public static int ResolvePort()
         {
-            var fromEnv = Environment.GetEnvironmentVariable("DSH_QUICKDOCK_PORT");
-            if (int.TryParse(fromEnv, NumberStyles.Integer, CultureInfo.InvariantCulture, out var envPort)
-                && envPort >= 0 && envPort <= 65535)
+            var options = DshDockPackage.Instance == null ? null : DshDockPackage.Instance.Options;
+            if (options != null && options.Port > 0)
             {
-                return envPort;
+                return options.Port;
             }
+            if (options == null || options.FollowQuickDockConfig)
+            {
+                var fromEnv = Environment.GetEnvironmentVariable("DSH_QUICKDOCK_PORT");
+                if (int.TryParse(fromEnv, NumberStyles.Integer, CultureInfo.InvariantCulture, out var envPort)
+                    && envPort >= 0 && envPort <= 65535)
+                {
+                    return envPort;
+                }
+                var configPort = ReadConfigPort();
+                if (configPort.HasValue)
+                {
+                    return configPort.Value;
+                }
+            }
+            return DefaultPort;
+        }
 
+        /// <summary>The port QuickDock's own config.json declares, if any.</summary>
+        public static int? ReadConfigPort()
+        {
             var config = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "dsh-quickdock",
@@ -59,8 +78,30 @@ namespace DshDock.VisualStudio
             catch (UnauthorizedAccessException)
             {
             }
+            return null;
+        }
 
-            return DefaultPort;
+        /// <summary>A short explanation of where the port came from, for the card.</summary>
+        public static string PortSource()
+        {
+            var options = DshDockPackage.Instance == null ? null : DshDockPackage.Instance.Options;
+            if (options != null && options.Port > 0)
+            {
+                return "from Tools → Options → DSH Dock";
+            }
+            if (options == null || options.FollowQuickDockConfig)
+            {
+                var fromEnv = Environment.GetEnvironmentVariable("DSH_QUICKDOCK_PORT");
+                if (int.TryParse(fromEnv, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+                {
+                    return "from DSH_QUICKDOCK_PORT";
+                }
+                if (ReadConfigPort().HasValue)
+                {
+                    return "from QuickDock's config.json";
+                }
+            }
+            return "QuickDock's default";
         }
 
         /// <summary>The shell page URL, carrying this dock's id and workspace folders.</summary>

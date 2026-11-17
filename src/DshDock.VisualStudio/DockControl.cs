@@ -110,8 +110,14 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.WebMessageReceived += OnWebMessage;
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
-                pairing = new DockPairing("0.2.1");
+                pairing = new DockPairing(
+                    "0.2.2",
+                    DshDockPackage.Instance == null ? DockPairing.PreferredPort : DshDockPackage.Instance.Options.McpPort);
                 pairing.StateChanged += OnPairingState;
+                if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.EditorTools)
+                {
+                    pairing.Start();
+                }
 
                 await ProbeAndShowAsync();
             }
@@ -158,6 +164,11 @@ namespace DshDock.VisualStudio
                         return;
                     }
                 }
+            }
+            catch (TaskCanceledException)
+            {
+                ShowOffline("No answer from " + origin + " within 2 seconds. Is DSH running with the dsh-quickdock plugin, and is its listener on?");
+                return;
             }
             catch (Exception error)
             {
@@ -261,6 +272,26 @@ namespace DshDock.VisualStudio
                 }
                 return;
             }
+            if (message == "start-dsh")
+            {
+                StartDsh();
+                return;
+            }
+            if (message == "settings")
+            {
+                DshDockPackage.ShowOptions();
+                return;
+            }
+            if (message == "log")
+            {
+                OpenLog();
+                return;
+            }
+            if (message == "adopt")
+            {
+                AdoptPort();
+                return;
+            }
 
             Dictionary<string, object> data;
             try
@@ -333,6 +364,57 @@ namespace DshDock.VisualStudio
             pairing = null;
         }
 
+        /// <summary>Start DSH in a console window (the offline card's Start DSH).</summary>
+        private void StartDsh()
+        {
+            try
+            {
+                DockLog.Write("start-dsh requested");
+                System.Diagnostics.Process.Start(new ProcessStartInfo("cmd.exe", "/c start \"DSH\" dsh web")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+            }
+            catch (Exception error)
+            {
+                ShowProblem("Could not start DSH: " + error.Message);
+            }
+        }
+
+        private void OpenLog()
+        {
+            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var host = Path.Combine(local, "dsh-quickdock", "host.log");
+            var dock = Path.Combine(local, "DshDock", "dock.log");
+            var path = File.Exists(host) ? host : dock;
+            if (!File.Exists(path))
+            {
+                ShowOffline("No QuickDock or DSH Dock log exists yet.");
+                return;
+            }
+            System.Diagnostics.Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+
+        /// <summary>Take the port QuickDock's config.json declares, then retry.</summary>
+        private void AdoptPort()
+        {
+            var config = QuickDockUrls.ReadConfigPort();
+            var options = DshDockPackage.Instance == null ? null : DshDockPackage.Instance.Options;
+            if (!config.HasValue)
+            {
+                ShowOffline("QuickDock's config.json does not declare a port yet. Set it in DSH → Settings → QuickDock → Connection, or pick the port below.");
+                return;
+            }
+            if (options != null)
+            {
+                options.Port = config.Value;
+                options.SaveSettingsToStorage();
+                DockLog.Write("adopted config.json port " + config.Value);
+            }
+            Reload();
+        }
+
         private void ShowOffline(string reason)
         {
             if (view.CoreWebView2 == null)
@@ -361,6 +443,7 @@ namespace DshDock.VisualStudio
                 .Replace("<", "&lt;")
                 .Replace(">", "&gt;");
             string address = port > 0 ? origin : "no listener";
+            string source = QuickDockUrls.PortSource();
             return @"<!DOCTYPE html>
 <html lang=""en"">
 <head>
@@ -372,14 +455,14 @@ namespace DshDock.VisualStudio
     font: 13px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
     display: flex; align-items: center; justify-content: center;
   }
-  main { max-width: 460px; padding: 28px; }
+  main { max-width: 500px; padding: 28px; }
   h1 { font-size: 18px; font-weight: 600; margin: 0 0 8px; }
   p { color: #8b8f96; margin: 0 0 10px; }
   code {
     background: rgba(128,128,128,.18); border-radius: 4px; padding: 1px 5px;
     font-family: ui-monospace, Consolas, monospace; font-size: 12px;
   }
-  .row { display: flex; gap: 8px; margin-top: 18px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
   button {
     height: 28px; padding: 0 14px; border-radius: 4px; border: 1px solid #393b40;
     background: transparent; color: #dfe1e5; font: inherit; cursor: pointer;
@@ -390,11 +473,17 @@ namespace DshDock.VisualStudio
 <body>
 <main>
   <h1>DSH Dock cannot reach QuickDock</h1>
-  <p>Tried <code>" + address + @"</code>.</p>
+  <p>Tried <code>" + address + @"</code> (" + source + @").</p>
   <p>" + escaped + @"</p>
   <div class=""row"">
     <button class=""primary"" onclick=""chrome.webview.postMessage('retry')"">Retry</button>
+    <button onclick=""chrome.webview.postMessage('start-dsh')"">Start DSH</button>
     <button onclick=""chrome.webview.postMessage('browser')"">Open in browser</button>
+  </div>
+  <div class=""row"">
+    <button onclick=""chrome.webview.postMessage('settings')"">Connection settings</button>
+    <button onclick=""chrome.webview.postMessage('log')"">QuickDock log</button>
+    <button onclick=""chrome.webview.postMessage('adopt')"">Use config.json port</button>
   </div>
 </main>
 </body>
