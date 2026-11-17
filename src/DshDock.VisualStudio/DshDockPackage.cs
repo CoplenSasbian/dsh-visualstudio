@@ -16,7 +16,7 @@ namespace DshDock.VisualStudio
     [InstalledProductRegistration(
         "DSH Dock for Visual Studio",
         "DeepSeek Harness's conversation in a Visual Studio tool window, served by QuickDock.",
-        "0.3.0")]
+        "0.3.1")]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideToolWindow(typeof(DockToolWindow))]
     [ProvideOptionPage(typeof(DshDockOptions), "DSH Dock", "General", 0, 0, true)]

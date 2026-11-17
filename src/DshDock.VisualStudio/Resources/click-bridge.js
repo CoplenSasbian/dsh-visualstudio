@@ -13,7 +13,9 @@
     if (/^[A-Za-z]:[\\/][^\n\r<>"|?*]+$/.test(text)) return text;
     if (/^(?:[A-Za-z0-9_.@-]+[\\/])+[A-Za-z0-9_.@-]+\.[A-Za-z0-9]{1,8}$/.test(text)) return text;
     // A chip at a root shows only `file.cs`; the extension tries every open root.
-    if (/^[A-Za-z0-9_.@-]+\.[A-Za-z0-9]{1,8}$/.test(text)) return text;
+    // No dots in the base: DOM class names (`tool.call.toolview`) must not look
+    // like a file name.
+    if (/^[A-Za-z0-9_@-]+\.[A-Za-z0-9]{1,8}$/.test(text)) return text;
     return '';
   }
 
@@ -25,10 +27,17 @@
         if (found) return found;
       }
     }
-    if (!node.children || node.children.length === 0) {
-      return looksLikePath(node.textContent || '');
+    if (node.children && node.children.length > 0) {
+      // The click can land on the tool card while the path is in its child chip.
+      for (var childIndex = 0; childIndex < Math.min(node.children.length, 4); childIndex += 1) {
+        var child = node.children[childIndex];
+        if (!child || (child.children && child.children.length > 0)) continue;
+        var nested = pathOf(child);
+        if (nested) return nested;
+      }
+      return '';
     }
-    return '';
+    return looksLikePath(node.textContent || '');
   }
 
   document.addEventListener('mousedown', function (event) {
