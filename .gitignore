@@ -1,0 +1,13 @@
+# Build output
+bin/
+obj/
+*.vsix
+.vs/
+
+# NuGet restore state
+packages/
+*.nuget.props
+*.nuget.targets
+
+# User-local build settings
+*.user
