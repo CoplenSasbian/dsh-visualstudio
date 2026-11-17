@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
@@ -117,7 +118,7 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 pairing = new DockPairing(
-                    "0.2.6",
+                    "0.2.7",
                     DshDockPackage.Instance == null ? DockPairing.PreferredPort : DshDockPackage.Instance.Options.McpPort);
                 pairing.StateChanged += OnPairingState;
                 if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.EditorTools)
@@ -249,14 +250,28 @@ namespace DshDock.VisualStudio
 
             if (!Path.IsPathRooted(path))
             {
-                var directory = QuickDockUrls.SolutionDirectory();
-                if (!string.IsNullOrEmpty(directory))
+                // Same rule as the VS Code / JetBrains docks: try every open root.
+                var roots = QuickDockUrls.SearchRoots().ToList();
+                var candidates = roots.Select(root => Path.Combine(root, path)).ToList();
+                var found = candidates.FirstOrDefault(File.Exists);
+                DockLog.Write(
+                    "open file: " + path
+                    + " candidates=" + string.Join(" | ", candidates)
+                    + " found=" + (found ?? "none"));
+                if (found == null)
                 {
-                    path = Path.Combine(directory, path);
+                    return;
+                }
+                path = found;
+            }
+            else
+            {
+                DockLog.Write("open file: " + path + " exists=" + File.Exists(path));
+                if (!File.Exists(path))
+                {
+                    return;
                 }
             }
-
-            DockLog.Write("open file: " + path + " exists=" + File.Exists(path));
             try
             {
                 var dte = Package.GetGlobalService(typeof(DTE)) as DTE2;

@@ -178,5 +178,59 @@ namespace DshDock.VisualStudio
                 yield return directory;
             }
         }
+
+        /// <summary>
+        /// The directories a relative file path may be relative to: the solution
+        /// directory and every project directory. The VS Code and JetBrains docks
+        /// do the same with their workspace folders / content roots - a path from
+        /// another session working directory cannot resolve there either.
+        /// </summary>
+        public static IEnumerable<string> SearchRoots()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var roots = new List<string>();
+            var solution = SolutionDirectory();
+            if (!string.IsNullOrEmpty(solution) && seen.Add(solution))
+            {
+                roots.Add(solution);
+            }
+
+            try
+            {
+                var dte = Package.GetGlobalService(typeof(EnvDTE.DTE)) as EnvDTE80.DTE2;
+                if (dte != null && dte.Solution != null)
+                {
+                    foreach (EnvDTE.Project project in dte.Solution.Projects)
+                    {
+                        string directory = null;
+                        try
+                        {
+                            if (!string.IsNullOrEmpty(project.FullName))
+                            {
+                                directory = Path.GetDirectoryName(project.FullName);
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            // A virtual project has no file.
+                        }
+                        if (!string.IsNullOrEmpty(directory) && seen.Add(directory))
+                        {
+                            roots.Add(directory);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // No solution service: the solution directory is still usable.
+            }
+
+            foreach (var root in roots)
+            {
+                yield return root;
+            }
+        }
     }
 }
