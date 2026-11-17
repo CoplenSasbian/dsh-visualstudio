@@ -111,7 +111,7 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 pairing = new DockPairing(
-                    "0.2.2",
+                    "0.2.3",
                     DshDockPackage.Instance == null ? DockPairing.PreferredPort : DshDockPackage.Instance.Options.McpPort);
                 pairing.StateChanged += OnPairingState;
                 if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.EditorTools)
@@ -205,7 +205,11 @@ namespace DshDock.VisualStudio
 
         private void OpenFile(string raw)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => OpenFile(raw)));
+                return;
+            }
             var path = raw ?? string.Empty;
             var nul = path.IndexOf('\u0000');
             if (nul >= 0)
@@ -218,6 +222,15 @@ namespace DshDock.VisualStudio
                 return;
             }
 
+            // A chip may carry file:line; split it only when the file part exists.
+            var line = 0;
+            var match = System.Text.RegularExpressions.Regex.Match(path, @"^(.*?):(\d+)$");
+            if (match.Success && File.Exists(match.Groups[1].Value))
+            {
+                path = match.Groups[1].Value;
+                int.TryParse(match.Groups[2].Value, out line);
+            }
+
             if (!Path.IsPathRooted(path))
             {
                 var directory = QuickDockUrls.SolutionDirectory();
@@ -226,13 +239,27 @@ namespace DshDock.VisualStudio
                     path = Path.Combine(directory, path);
                 }
             }
+
+            DockLog.Write("open file: " + path + " exists=" + File.Exists(path));
             try
             {
                 var dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
-                dte?.ItemOperations.OpenFile(path, EnvDTE.Constants.vsViewKindTextView);
+                if (dte != null)
+                {
+                    dte.ItemOperations.OpenFile(path, EnvDTE.Constants.vsViewKindTextView);
+                    if (line > 0 && dte.ActiveDocument != null && dte.ActiveDocument.Selection is TextSelection selection)
+                    {
+                        selection.GotoLine(line, true);
+                    }
+                    DockLog.Write("open file: via DTE");
+                    return;
+                }
+                VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, path);
+                DockLog.Write("open file: via VsShellUtilities");
             }
             catch (Exception error)
             {
+                DockLog.Write("open file failed: " + error);
                 MessageBox.Show(
                     "Could not open " + path + Environment.NewLine + error.Message,
                     "DSH Dock",
@@ -243,7 +270,6 @@ namespace DshDock.VisualStudio
 
         private void OnWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
             string message;
             try
             {
@@ -251,9 +277,29 @@ namespace DshDock.VisualStudio
             }
             catch (ArgumentException)
             {
+                try
+                {
+                    var value = json.DeserializeObject(e.WebMessageAsJson);
+                    message = value as string ?? e.WebMessageAsJson;
+                }
+                catch (Exception)
+                {
+                    DockLog.Write("web message: unreadable (" + e.WebMessageAsJson + ")");
+                    return;
+                }
+            }
+            DockLog.Write("web message: " + (message.Length > 160 ? message.Substring(0, 160) : message));
+
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => HandleMessage(message)));
                 return;
             }
+            HandleMessage(message);
+        }
 
+        private void HandleMessage(string message)
+        {
             if (message.StartsWith("open-file:", StringComparison.Ordinal))
             {
                 OpenFile(message.Substring("open-file:".Length));
