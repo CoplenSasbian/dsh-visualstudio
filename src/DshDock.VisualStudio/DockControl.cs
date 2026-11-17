@@ -114,12 +114,22 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 pairing = new DockPairing(
-                    "0.2.4",
+                    "0.2.5",
                     DshDockPackage.Instance == null ? DockPairing.PreferredPort : DshDockPackage.Instance.Options.McpPort);
                 pairing.StateChanged += OnPairingState;
                 if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.EditorTools)
                 {
                     pairing.Start();
+                }
+
+                // A click bridge inside the DSH app frame: the app's own routing
+                // depends on its dock context, which can be missing in a WebView2
+                // host; this listens in the frame itself and posts the path
+                // straight to the extension. Frames only: the shell is top-level.
+                var clickBridge = ClickBridgeScript();
+                if (!string.IsNullOrEmpty(clickBridge))
+                {
+                    await view.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(clickBridge);
                 }
 
                 await ProbeAndShowAsync();
@@ -425,6 +435,22 @@ namespace DshDock.VisualStudio
         {
             pairing?.Dispose();
             pairing = null;
+        }
+
+        private static string ClickBridgeScript()
+        {
+            var path = Path.Combine(
+                Path.GetDirectoryName(typeof(DockControl).Assembly.Location) ?? string.Empty,
+                "click-bridge.js");
+            try
+            {
+                return File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+            }
+            catch (Exception error)
+            {
+                DockLog.Write("click bridge unreadable: " + error.Message);
+                return string.Empty;
+            }
         }
 
         /// <summary>Start DSH in a console window (the offline card's Start DSH).</summary>

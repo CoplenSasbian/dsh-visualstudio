@@ -41,6 +41,11 @@
     <Content Include="source.extension.vsixmanifest">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="Resources\click-bridge.js">
+      <Link>click-bridge.js</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <!-- The WebView2 SDK ships the managed wrapper; the browser loader is native
          and VS loads it from this extension's folder. -->
     <Content Include="$(PkgMicrosoft_Web_WebView2)\runtimes\win-x64\native\WebView2Loader.dll">
