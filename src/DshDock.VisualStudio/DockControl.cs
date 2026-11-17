@@ -1,15 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Windows.Forms;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.WinForms;
+using Microsoft.Web.WebView2.Wpf;
 
 namespace DshDock.VisualStudio
 {
@@ -17,56 +19,106 @@ namespace DshDock.VisualStudio
     /// The dock: QuickDock's shell page in a WebView2, plus a local card when the
     /// listener cannot be reached.
     ///
+    /// This is a WPF control on purpose: a Visual Studio tool window hosts a
+    /// FrameworkElement as its content, and a WinForms UserControl would be wrapped
+    /// in a ContentControl and never rendered (the first build's blank window).
+    ///
     /// The shell page is embedded in a one-line host page rather than loaded as
     /// the document: that is what lets the shell's `quickdock:open-file` message
     /// reach this extension (its parent), which then opens the file in Visual
     /// Studio. The same shape the VS Code extension's webview uses.
     /// </summary>
-    public sealed class DockControl : UserControl
+    public sealed class DockControl : System.Windows.Controls.UserControl, IDisposable
     {
         private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
 
         private readonly WebView2 view;
-        private readonly int port;
-        private readonly string shellUrl;
-        private readonly string origin;
+        private readonly TextBlock problem;
+        private int port;
+        private string shellUrl;
+        private string origin;
+        private bool started;
+        private bool offline;
+        private DockPairing pairing;
+        private readonly System.Web.Script.Serialization.JavaScriptSerializer json =
+            new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = 8 * 1024 * 1024 };
 
         public DockControl()
         {
-            port = QuickDockUrls.ResolvePort();
-            shellUrl = port > 0 ? QuickDockUrls.ShellUrl(port) : string.Empty;
-            origin = port > 0 ? "http://127.0.0.1:" + port : string.Empty;
+            DockLog.Write("control created");
 
-            view = new WebView2
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(21, 21, 23));
+
+            var grid = new Grid();
+            view = new WebView2 { Visibility = Visibility.Collapsed };
+            problem = new TextBlock
             {
-                Dock = DockStyle.Fill,
-                DefaultBackgroundColor = Color.FromArgb(21, 21, 23)
+                Text = "Starting DSH Dock…",
+                Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(223, 225, 229)),
+                TextWrapping = TextWrapping.Wrap,
+                TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(24),
+                Visibility = Visibility.Visible
             };
-            Controls.Add(view);
-            Load += OnLoaded;
+            grid.Children.Add(view);
+            grid.Children.Add(problem);
+            Content = grid;
+
+            Loaded += (sender, args) => EnsureStarted();
+            IsVisibleChanged += (sender, args) => EnsureStarted();
         }
 
-        private async void OnLoaded(object sender, EventArgs e)
+        /// <summary>
+        /// Start WebView2 once. A tool window may load the control before it is
+        /// shown; either event is a fine trigger, and the first one wins.
+        /// </summary>
+        private void EnsureStarted()
         {
+            if (started)
+            {
+                return;
+            }
+            started = true;
+            DockLog.Write("ensure started");
+            _ = InitializeAsync();
+        }
+
+        private async Task InitializeAsync()
+        {
+            DockLog.Write("init");
             try
             {
+                port = QuickDockUrls.ResolvePort();
+                origin = port > 0 ? "http://127.0.0.1:" + port : string.Empty;
+                shellUrl = port > 0 ? QuickDockUrls.ShellUrl(port) : string.Empty;
+                DockLog.Write("port=" + port + " url=" + shellUrl);
+
                 var dataFolder = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "DshDock",
                     "WebView2");
                 var environment = await CoreWebView2Environment.CreateAsync(null, dataFolder);
+                DockLog.Write("environment ok: " + environment.BrowserVersionString);
                 await view.EnsureCoreWebView2Async(environment);
+                DockLog.Write("webview ok");
 
                 view.CoreWebView2.Settings.AreDevToolsEnabled = true;
                 view.CoreWebView2.Settings.IsStatusBarEnabled = false;
                 view.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
                 view.CoreWebView2.WebMessageReceived += OnWebMessage;
+                view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
+
+                pairing = new DockPairing("0.2.0");
+                pairing.StateChanged += OnPairingState;
 
                 await ProbeAndShowAsync();
             }
             catch (Exception error)
             {
-                ShowOffline("WebView2 could not start: " + error.Message);
+                DockLog.Write("FAIL " + error);
+                ShowProblem("DSH Dock could not start." + Environment.NewLine + error.Message);
             }
         }
 
@@ -75,6 +127,7 @@ namespace DshDock.VisualStudio
         {
             if (view.CoreWebView2 == null)
             {
+                ShowProblem("WebView2 did not initialise.");
                 return;
             }
             if (port <= 0 || string.IsNullOrEmpty(shellUrl))
@@ -100,7 +153,31 @@ namespace DshDock.VisualStudio
                 return;
             }
 
-            view.CoreWebView2.NavigateToString(WrapperHtml());
+            DockLog.Write("probe ok; loading shell");
+            offline = false;
+            problem.Visibility = Visibility.Collapsed;
+            view.Visibility = Visibility.Visible;
+            view.CoreWebView2.Navigate(shellUrl);
+        }
+
+        private void OnNavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            if (offline)
+            {
+                return;
+            }
+            if (e.IsSuccess)
+            {
+                // The shell asks for the real state once it is up; our pairing may
+                // already be on (this window was reopened), so answer every load.
+                PostState();
+                return;
+            }
+            var source = view.Source == null ? string.Empty : view.Source.AbsoluteUri;
+            if (source.StartsWith(origin, StringComparison.OrdinalIgnoreCase))
+            {
+                ShowOffline("QuickDock answered at " + source + " (" + e.WebErrorStatus + ").");
+            }
         }
 
         private void OpenFile(string raw)
@@ -136,8 +213,8 @@ namespace DshDock.VisualStudio
                 MessageBox.Show(
                     "Could not open " + path + Environment.NewLine + error.Message,
                     "DSH Dock",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
         }
 
@@ -159,62 +236,110 @@ namespace DshDock.VisualStudio
                 OpenFile(message.Substring("open-file:".Length));
                 return;
             }
-            switch (message)
+            if (message == "retry")
             {
-                case "retry":
-                    _ = ProbeAndShowAsync();
+                _ = ProbeAndShowAsync();
+                return;
+            }
+            if (message == "browser")
+            {
+                if (!string.IsNullOrEmpty(shellUrl))
+                {
+                    System.Diagnostics.Process.Start(new ProcessStartInfo(shellUrl) { UseShellExecute = true });
+                }
+                return;
+            }
+
+            Dictionary<string, object> data;
+            try
+            {
+                data = json.DeserializeObject(message) as Dictionary<string, object>;
+            }
+            catch (Exception)
+            {
+                return;
+            }
+            if (data == null)
+            {
+                return;
+            }
+
+            var type = Value(data, "type");
+            switch (type)
+            {
+                case "quickdock:open-file":
+                    OpenFile(Value(data, "path"));
                     break;
-                case "browser":
-                    if (!string.IsNullOrEmpty(shellUrl))
-                    {
-                        System.Diagnostics.Process.Start(new ProcessStartInfo(shellUrl) { UseShellExecute = true });
-                    }
+                case "quickdock:mcp-toggle":
+                    pairing?.Toggle();
                     break;
             }
+        }
+
+        private void OnPairingState(bool on, string detail)
+        {
+            Dispatcher.BeginInvoke(new Action(() => PostState(on, detail)));
+        }
+
+        private void PostState()
+        {
+            PostState(pairing != null && pairing.On, pairing == null ? string.Empty : pairing.Detail);
+        }
+
+        private void PostState(bool on, string detail)
+        {
+            if (view.CoreWebView2 == null)
+            {
+                return;
+            }
+            var text = json.Serialize(new Dictionary<string, object>
+            {
+                { "type", "quickdock:mcp-state" },
+                { "on", on },
+                { "detail", detail ?? string.Empty }
+            });
+            try
+            {
+                view.CoreWebView2.PostWebMessageAsString(text);
+            }
+            catch (Exception error)
+            {
+                DockLog.Write("post state failed: " + error.Message);
+            }
+        }
+
+        private static string Value(Dictionary<string, object> data, string key)
+        {
+            return data != null && data.ContainsKey(key) && data[key] != null
+                ? Convert.ToString(data[key], System.Globalization.CultureInfo.InvariantCulture)
+                : string.Empty;
+        }
+
+        public void Dispose()
+        {
+            pairing?.Dispose();
+            pairing = null;
         }
 
         private void ShowOffline(string reason)
         {
             if (view.CoreWebView2 == null)
             {
+                ShowProblem(reason);
                 return;
             }
+            offline = true;
+            problem.Visibility = Visibility.Collapsed;
+            view.Visibility = Visibility.Visible;
             view.CoreWebView2.NavigateToString(OfflineHtml(reason));
         }
 
-        /// <summary>
-        /// The one-line host page: the shell fills it, and its `open-file` message
-        /// (posted to its parent) is forwarded to this extension. The origin check
-        /// keeps any other page in the webview from driving the host.
-        /// </summary>
-        private string WrapperHtml()
+        private void ShowProblem(string text)
         {
-            string src = shellUrl.Replace("&", "&amp;").Replace("\"", "&quot;");
-            return @"<!DOCTYPE html>
-<html lang=""en"">
-<head>
-<meta charset=""utf-8"">
-<style>
-  html, body { height: 100%; margin: 0; background: #151517; }
-  iframe { display: block; width: 100%; height: 100%; border: 0; }
-</style>
-</head>
-<body>
-<iframe src=""" + src + @""" allow=""clipboard-read; clipboard-write""></iframe>
-<script>
-(function () {
-  var origin = '" + origin + @"';
-  window.addEventListener('message', function (event) {
-    if (event.origin !== origin) return;
-    var data = event.data || {};
-    if (data.type === 'quickdock:open-file' && typeof data.path === 'string' && data.path) {
-      try { chrome.webview.postMessage('open-file:' + data.path); } catch (error) { /* ignore */ }
-    }
-  });
-})();
-</script>
-</body>
-</html>";
+            DockLog.Write("problem: " + text);
+            view.Visibility = Visibility.Collapsed;
+            problem.Text = text;
+            problem.Visibility = Visibility.Visible;
         }
 
         private string OfflineHtml(string reason)

@@ -16,8 +16,25 @@ namespace DshDock.VisualStudio
         public DockToolWindow()
             : base(null)
         {
+            DockLog.Write("pane ctor; ui=" + ThreadHelper.CheckAccess());
             Caption = "DSH Dock";
             Content = new DockControl();
+            DockLog.Write("pane ctor done; content=" + (Content == null ? "null" : Content.GetType().Name));
+        }
+
+        public override void OnToolWindowCreated()
+        {
+            base.OnToolWindowCreated();
+            DockLog.Write("pane created; content=" + (Content == null ? "null" : Content.GetType().FullName));
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && Content is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }

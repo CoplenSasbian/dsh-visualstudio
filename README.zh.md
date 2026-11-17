@@ -7,8 +7,8 @@ DSH Dock 把 DSH 自己的对话界面放在正在处理的代码旁边：由 Qu
 页面。点对话里的文件路径会在 Visual Studio 中打开。它是 **dsh-quickdock**（运行在 DSH 里的
 插件）的客户端。
 
-这个第一版只做 dock 窗口本身；另一半——让 agent 读写你的解决方案的反向 MCP 桥——是下一个
-里程碑。
+这个第一版是 dock 窗口，外加**只读**的编辑器工具：agent 能看到解决方案、读文件、搜索、
+读诊断和符号、把文件打开到某一行。写入工具和审阅 diff 是下一个里程碑。
 
 ## 功能
 
@@ -18,6 +18,11 @@ DSH Dock 把 DSH 自己的对话界面放在正在处理的代码旁边：由 Qu
   跟随 DSH 绑定的会话。
 - **文件在 Visual Studio 里打开。** 工具卡片里的路径会在 IDE 中打开；dock 报相对路径时按
   当前解决方案目录解析。
+- **给 agent 的编辑器工具。** 打开 dock 标题栏的**插头**：扩展会启动一个回环 MCP server，
+  QuickDock 把它挂到解决方案目录上，agent 就得到一组 `mcp__visualstudio__*` 工具——工作区
+  目录、选中内容、读文件、列文件、文本搜索、Error List、文件符号、把文件打开到某一行。
+- **按解决方案生效。** 只有工作目录在解决方案目录里的会话才会挂载工具；会话在别处时，
+  标题栏出现琥珀色警告三角，「列表」按钮显示发布了什么、挂载了什么。
 - **不会只剩空白。** DSH 或 QuickDock 连不上时，窗口会说明尝试的地址和原因，并提供重试和
   在浏览器打开。
 - **自动找监听端口。** 依次读 `DSH_QUICKDOCK_PORT`、QuickDock 的 `config.json`、`47910`，
@@ -35,7 +40,7 @@ DSH Dock for Visual Studio 是同一个页面的三个编辑器 dock 之一。**
 | [dsh-quickdock](https://github.com/CoplenSasbian/dsh-quickdock) | DSH | 宿主：把对话作为回环页面提供出来，并提供编辑器 dock 注册工具的 MCP 桥。**每个编辑器 dock 都依赖它。** |
 | [DSH Dock for VS Code](https://github.com/CoplenSasbian/dsh-vsdock) | VS Code | 同一页面放进辅助侧边栏，外加 VS Code 编辑器工具。 |
 | [DSH Dock for JetBrains IDEs](https://github.com/CoplenSasbian/dsh-intellijdock) | IntelliJ IDEA、CLion、PyCharm、WebStorm、GoLand 等 | 同一页面放进工具窗口，外加 JetBrains 编辑器工具。 |
-| [DSH Dock for Visual Studio](https://github.com/CoplenSasbian/dsh-visualstudio) | Visual Studio 2026 | 同一页面放进工具窗口（编辑器工具部分还在做）。 |
+| [DSH Dock for Visual Studio](https://github.com/CoplenSasbian/dsh-visualstudio) | Visual Studio 2026 | 同一页面放进工具窗口，外加 Visual Studio 编辑器工具（目前只读）。 |
 
 这些编辑器 dock 可以同时连同一个目录：工具命名空间（`vscode_*`、`mcp__<ide>__*`）不会冲突。
 

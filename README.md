@@ -8,8 +8,9 @@ controls, the same page the VS Code and JetBrains docks embed. A file path click
 conversation opens in Visual Studio. It is a client of **dsh-quickdock**, the plugin that runs
 inside DSH.
 
-This first version is the dock window itself. The editor-tools half — a reverse MCP bridge
-that lets the agent read and change your solution — is the next milestone.
+This first version is the dock window with a read-only editor-tools half: the agent can see the
+solution, read files, search, read diagnostics and symbols, and open a file at a line. The write
+tools and review diffs are the next milestone.
 
 ## Features
 
@@ -19,6 +20,13 @@ that lets the agent read and change your solution — is the next milestone.
   rest of the bar; the dock follows the session DSH bound to it.
 - **Files open in Visual Studio.** A path in a tool card opens in the IDE, resolved against
   the open solution when the dock reported a relative path.
+- **Editor tools for the agent.** Turn on the plug in the dock's title bar: the extension starts
+  a loopback MCP server and QuickDock mounts it for the solution folder, so the agent gets
+  `mcp__visualstudio__*` tools — workspace folders, the active selection, file reads, file
+  listing, text search, the Error List, a file's symbols, and opening a file at a line.
+- **Scoped to your solution.** Tools are mounted only for sessions working inside the solution
+  directory; when the session on screen works elsewhere, the title bar shows an amber warning
+  triangle, and the list button shows what was published and what is mounted.
 - **Never a blank panel.** When DSH or QuickDock is not reachable, the window says which
   address it tried and why, and offers Retry and Open in browser.
 - **Finds the listener.** The port comes from `DSH_QUICKDOCK_PORT`, then QuickDock's
@@ -37,7 +45,7 @@ QuickDock serves the conversation and the loopback listener this window reads.
 | [dsh-quickdock](https://github.com/CoplenSasbian/dsh-quickdock) | DSH | The host half: serves the conversation as a loopback page and the MCP bridge the editor docks register with. **Required by every editor dock.** |
 | [DSH Dock for VS Code](https://github.com/CoplenSasbian/dsh-vsdock) | VS Code | The same page in the secondary side bar, plus VS Code editor tools. |
 | [DSH Dock for JetBrains IDEs](https://github.com/CoplenSasbian/dsh-intellijdock) | IntelliJ IDEA, CLion, PyCharm, WebStorm, GoLand, … | The same page in a tool window, plus JetBrains editor tools. |
-| [DSH Dock for Visual Studio](https://github.com/CoplenSasbian/dsh-visualstudio) | Visual Studio 2026 | The same page in a tool window (the editor-tools half is next). |
+| [DSH Dock for Visual Studio](https://github.com/CoplenSasbian/dsh-visualstudio) | Visual Studio 2026 | The same page in a tool window, plus Visual Studio editor tools (read-only for now). |
 
 The editor docks can be connected to the same folder at the same time: their tool namespaces
 (`vscode_*`, `mcp__<ide>__*`) do not collide.

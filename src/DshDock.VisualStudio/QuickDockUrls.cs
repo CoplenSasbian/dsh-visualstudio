@@ -72,7 +72,8 @@ namespace DshDock.VisualStudio
                 .Append("/quickdock?view=")
                 .Append(ViewName)
                 .Append("&dock=")
-                .Append(Uri.EscapeDataString(DockId()));
+                .Append(Uri.EscapeDataString(DockId()))
+                .Append("&mcp=0");
             foreach (var folder in WorkspaceFolders())
             {
                 url.Append("&workspace=").Append(Uri.EscapeDataString(folder));
