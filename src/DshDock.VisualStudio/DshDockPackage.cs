@@ -16,7 +16,7 @@ namespace DshDock.VisualStudio
     [InstalledProductRegistration(
         "DSH Dock for Visual Studio",
         "DeepSeek Harness's conversation in a Visual Studio tool window, served by QuickDock.",
-        "0.3.4")]
+        "0.3.5")]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideToolWindow(typeof(DockToolWindow))]
     [ProvideOptionPage(typeof(DshDockOptions), "DSH Dock", "General", 0, 0, true)]
@@ -40,6 +40,8 @@ namespace DshDock.VisualStudio
 
         public const int ToggleReviewCommandId = 0x0104;
 
+        public const int AddToChatCommandId = 0x0105;
+
         protected override async Task InitializeAsync(
             CancellationToken cancellationToken,
             IProgress<ServiceProgressData> progress)
@@ -60,6 +62,35 @@ namespace DshDock.VisualStudio
             commandService.AddCommand(new MenuCommand(OnReloadDock, reloadId));
             var reviewId = new CommandID(new Guid(CommandSetGuidString), ToggleReviewCommandId);
             commandService.AddCommand(new MenuCommand(OnToggleReview, reviewId));
+            var chatId = new CommandID(new Guid(CommandSetGuidString), AddToChatCommandId);
+            commandService.AddCommand(new MenuCommand(OnAddToChat, chatId));
+        }
+
+        private void OnAddToChat(object sender, EventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try
+            {
+                var dte = GetService(typeof(EnvDTE.DTE)) as EnvDTE80.DTE2;
+                var document = dte?.ActiveDocument;
+                if (document == null)
+                {
+                    return;
+                }
+                var selection = document.Selection as EnvDTE.TextSelection;
+                var hasSelection = selection != null && !string.IsNullOrEmpty(selection.Text);
+                var startLine = hasSelection ? selection.TopLine : (selection?.CurrentLine ?? 1);
+                var endLine = hasSelection ? selection.BottomLine : startLine;
+                var startColumn = hasSelection ? selection.TopPoint.LineCharOffset : (selection?.ActivePoint.LineCharOffset ?? 1);
+                var endColumn = hasSelection ? selection.BottomPoint.LineCharOffset : startColumn;
+                var window = FindToolWindow(typeof(DockToolWindow), 0, false) as DockToolWindow;
+                (window?.Content as DockControl)?.AddToChat(
+                    document.FullName, startLine, endLine, startColumn, endColumn);
+            }
+            catch (Exception error)
+            {
+                DockLog.Write("chat: cannot read the editor selection: " + error.Message);
+            }
         }
 
         private void OnToggleReview(object sender, EventArgs e)

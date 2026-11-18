@@ -18,6 +18,8 @@ DSH Dock 把 DSH 自己的对话界面放在正在处理的代码旁边：由 Qu
   跟随 DSH 绑定的会话。
 - **文件在 Visual Studio 里打开。** 工具卡片里的路径会在 IDE 中打开；dock 报相对路径时按
   当前解决方案目录解析。
+- **把代码发给对话。** 右键文件或选区 → *Add to DSH Conversation*；输入框出现 `@路径 (lines a–b)`，
+  agent 从该位置开始。
 - **给 agent 的编辑器工具。** 打开 dock 标题栏的**插头**：扩展会启动一个回环 MCP server，
   QuickDock 把它挂到解决方案目录上，agent 就得到一组 `mcp__visualstudio__*` 工具——工作区
   目录、选中内容、读文件、列文件、文本搜索、Error List、文件符号、把文件打开到某一行。

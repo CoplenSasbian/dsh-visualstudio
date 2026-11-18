@@ -119,7 +119,7 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 pairing = new DockPairing(
-                    "0.3.4",
+                    "0.3.5",
                     DshDockPackage.Instance == null ? DockPairing.PreferredPort : DshDockPackage.Instance.Options.McpPort);
                 pairing.StateChanged += OnPairingState;
                 if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.EditorTools)
@@ -449,6 +449,34 @@ namespace DshDock.VisualStudio
             return data != null && data.ContainsKey(key) && data[key] != null
                 ? Convert.ToString(data[key], System.Globalization.CultureInfo.InvariantCulture)
                 : string.Empty;
+        }
+
+        /// <summary>Ask the dock page to insert the selection into its composer.</summary>
+        public void AddToChat(string path, int startLine, int endLine, int startColumn, int endColumn)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (view?.CoreWebView2 == null)
+            {
+                DockLog.Write("chat: webview is not ready");
+                return;
+            }
+            var payload = new Dictionary<string, object>
+            {
+                ["type"] = "quickdock:add-to-chat",
+                ["path"] = path,
+                ["line"] = startLine,
+                ["endLine"] = endLine,
+                ["column"] = startColumn,
+                ["endColumn"] = endColumn
+            };
+            try
+            {
+                view.CoreWebView2.PostWebMessageAsJson(json.Serialize(payload));
+            }
+            catch (Exception error)
+            {
+                DockLog.Write("chat: cannot post the selection: " + error.Message);
+            }
         }
 
         /// <summary>Turn the automatic review on or off without reopening the dock.</summary>

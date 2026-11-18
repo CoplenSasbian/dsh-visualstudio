@@ -20,6 +20,8 @@ tools and review diffs are the next milestone.
   rest of the bar; the dock follows the session DSH bound to it.
 - **Files open in Visual Studio.** A path in a tool card opens in the IDE, resolved against
   the open solution when the dock reported a relative path.
+- **Send code to the conversation.** Right-click a file or selection → *Add to DSH Conversation*;
+  the composer gets `@path (lines a–b)` and the agent starts from that location.
 - **Editor tools for the agent.** Turn on the plug in the dock's title bar: the extension starts
   a loopback MCP server and QuickDock mounts it for the solution folder, so the agent gets
   `mcp__visualstudio__*` tools — workspace folders, the active selection, file reads, file

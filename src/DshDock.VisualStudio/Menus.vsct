@@ -47,6 +47,13 @@
           <CommandName>Auto diff</CommandName>
         </Strings>
       </Button>
+      <Button guid="guidDshDockCmdSet" id="AddToChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_CODEWIN_TEXTEDIT" />
+        <Strings>
+          <ButtonText>Add to DSH Conversation</ButtonText>
+          <CommandName>Add to DSH Conversation</CommandName>
+        </Strings>
+      </Button>
     </Buttons>
 
     <Bitmaps>
@@ -67,6 +74,7 @@
       <IDSymbol name="OpenDockCommandId" value="0x0100" />
       <IDSymbol name="ReloadDockCommandId" value="0x0101" />
       <IDSymbol name="ToggleReviewCommandId" value="0x0104" />
+      <IDSymbol name="AddToChatCommandId" value="0x0105" />
       <IDSymbol name="DockToolbar" value="0x0102" />
       <IDSymbol name="DockToolbarGroup" value="0x0103" />
     </GuidSymbol>
