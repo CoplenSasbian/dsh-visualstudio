@@ -205,6 +205,13 @@ namespace DshDock.VisualStudio
             {
                 return;
             }
+            // Only files in the solution: a dock bound to a session in another
+            // workspace must not pop diffs for files the user cannot see here.
+            if (!IsInsideRoots(path))
+            {
+                DockLog.Write("review: " + path + " is outside the solution; skipping");
+                return;
+            }
             var text = await ReadTextAsync(path);
             if (text == null)
             {
@@ -340,6 +347,43 @@ namespace DshDock.VisualStudio
                 }
             }
             return null;
+        }
+
+        /// <summary>Whether a path sits below one of this solution's roots.</summary>
+        private bool IsInsideRoots(string path)
+        {
+            string full;
+            try
+            {
+                full = Path.GetFullPath(path);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            foreach (var root in roots)
+            {
+                if (string.IsNullOrEmpty(root))
+                {
+                    continue;
+                }
+                string folder;
+                try
+                {
+                    folder = Path.GetFullPath(root)
+                        .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+                if (full.Equals(folder, StringComparison.OrdinalIgnoreCase)
+                    || full.StartsWith(folder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static IEnumerable<string> EnumerateFiles(string root)
