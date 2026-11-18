@@ -119,18 +119,14 @@ namespace DshDock.VisualStudio
                 view.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
                 pairing = new DockPairing(
-                    "0.3.2",
+                    "0.3.3",
                     DshDockPackage.Instance == null ? DockPairing.PreferredPort : DshDockPackage.Instance.Options.McpPort);
                 pairing.StateChanged += OnPairingState;
                 if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.EditorTools)
                 {
                     pairing.Start();
                 }
-                if (DshDockPackage.Instance != null && DshDockPackage.Instance.Options.ReviewEdits)
-                {
-                    review = new ReviewWatcher(port, QuickDockUrls.SearchRoots().ToArray());
-                    review.Start();
-                }
+                StartReview();
 
                 // A click bridge inside the DSH app frame: the app's own routing
                 // depends on its dock context, which can be missing in a WebView2
@@ -453,6 +449,41 @@ namespace DshDock.VisualStudio
             return data != null && data.ContainsKey(key) && data[key] != null
                 ? Convert.ToString(data[key], System.Globalization.CultureInfo.InvariantCulture)
                 : string.Empty;
+        }
+
+        /// <summary>Turn the automatic review on or off without reopening the dock.</summary>
+        public void SetReview(bool on)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (on)
+            {
+                StartReview();
+            }
+            else
+            {
+                review?.Dispose();
+                review = null;
+            }
+        }
+
+        private void StartReview()
+        {
+            if (review != null)
+            {
+                return;
+            }
+            if (DshDockPackage.Instance == null || !DshDockPackage.Instance.Options.ReviewEdits)
+            {
+                return;
+            }
+            var quickDockPort = QuickDockUrls.ResolvePort();
+            if (quickDockPort <= 0)
+            {
+                return;
+            }
+            review = new ReviewWatcher(quickDockPort, QuickDockUrls.SearchRoots().ToArray());
+            review.Start();
+            DockLog.Write("review: following DSH writes on port " + quickDockPort);
         }
 
         public void Dispose()

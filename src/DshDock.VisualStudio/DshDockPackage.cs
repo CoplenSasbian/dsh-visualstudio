@@ -16,7 +16,7 @@ namespace DshDock.VisualStudio
     [InstalledProductRegistration(
         "DSH Dock for Visual Studio",
         "DeepSeek Harness's conversation in a Visual Studio tool window, served by QuickDock.",
-        "0.3.2")]
+        "0.3.3")]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideToolWindow(typeof(DockToolWindow))]
     [ProvideOptionPage(typeof(DshDockOptions), "DSH Dock", "General", 0, 0, true)]
@@ -38,6 +38,8 @@ namespace DshDock.VisualStudio
 
         public const int DockToolbarCommandId = 0x0102;
 
+        public const int ToggleReviewCommandId = 0x0104;
+
         protected override async Task InitializeAsync(
             CancellationToken cancellationToken,
             IProgress<ServiceProgressData> progress)
@@ -56,6 +58,20 @@ namespace DshDock.VisualStudio
             commandService.AddCommand(new MenuCommand(OnOpenDock, commandId));
             var reloadId = new CommandID(new Guid(CommandSetGuidString), ReloadDockCommandId);
             commandService.AddCommand(new MenuCommand(OnReloadDock, reloadId));
+            var reviewId = new CommandID(new Guid(CommandSetGuidString), ToggleReviewCommandId);
+            commandService.AddCommand(new MenuCommand(OnToggleReview, reviewId));
+        }
+
+        private void OnToggleReview(object sender, EventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var options = Options;
+            options.ReviewEdits = !options.ReviewEdits;
+            options.SaveSettingsToStorage();
+            var window = FindToolWindow(typeof(DockToolWindow), 0, false) as DockToolWindow;
+            (window?.Content as DockControl)?.SetReview(options.ReviewEdits);
+            var statusBar = GetService(typeof(SVsStatusbar)) as IVsStatusbar;
+            statusBar?.SetText("DSH automatic diff: " + (options.ReviewEdits ? "on" : "off"));
         }
 
         private void OnReloadDock(object sender, EventArgs e)
