@@ -24,7 +24,10 @@
     var level = depth || 0;
     if (node.attributes) {
       for (var index = 0; index < node.attributes.length; index += 1) {
-        var found = looksLikePath(node.attributes[index].value);
+        var attribute = node.attributes[index];
+        // `class` is a layout name, never a file.
+        if (attribute.name === 'class' || attribute.name === 'className') continue;
+        var found = looksLikePath(attribute.value);
         if (found) return found;
       }
     }
