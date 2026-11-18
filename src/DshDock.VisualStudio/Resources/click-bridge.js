@@ -19,8 +19,9 @@
     return '';
   }
 
-  function pathOf(node) {
+  function pathOf(node, depth) {
     if (!node || !node.getAttribute) return '';
+    var level = depth || 0;
     if (node.attributes) {
       for (var index = 0; index < node.attributes.length; index += 1) {
         var found = looksLikePath(node.attributes[index].value);
@@ -28,11 +29,10 @@
       }
     }
     if (node.children && node.children.length > 0) {
-      // The click can land on the tool card while the path is in its child chip.
+      // The click can land on the tool card while the path is in a nested chip.
+      if (level >= 3) return '';
       for (var childIndex = 0; childIndex < Math.min(node.children.length, 4); childIndex += 1) {
-        var child = node.children[childIndex];
-        if (!child || (child.children && child.children.length > 0)) continue;
-        var nested = pathOf(child);
+        var nested = pathOf(node.children[childIndex], level + 1);
         if (nested) return nested;
       }
       return '';
