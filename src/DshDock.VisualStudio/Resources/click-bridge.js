@@ -15,7 +15,7 @@
     // A chip at a root shows only `file.cs`; the extension tries every open root.
     // No dots in the base: DOM class names (`tool.call.toolview`) must not look
     // like a file name.
-    if (/^[A-Za-z0-9_@-]+\.[A-Za-z0-9]{1,8}$/.test(text)) return text;
+    if (/^[A-Za-z0-9_@-]+\.[A-Za-z]{1,8}$/.test(text)) return text;
     return '';
   }
 
